@@ -3,7 +3,6 @@ extern crate portaudio;
 extern crate ansi_escapes;
 
 use portaudio as pa;
-use std::marker::Sized;
 
 const SAMPLE_RATE: f64 = 44_100.0;
 const FRAMES: u32 = 128;
@@ -38,12 +37,6 @@ impl BeatDetector {
         self.sample_buffer.iter().fold(0., sum) * RATIO
     }
 
-    fn display(&mut self) {
-        self.energy = self.calculate_energy();
-        print!("{}", ansi_escapes::EraseLines(2));
-        println!("Energy: {}", self.energy);
-    }
-
     fn insert_new_sample(&mut self, sample: f32) {
         // Since buffer size == frames, sum evaluates after each complete chunk
         self.sample_buffer[self.sample_buffer_position] = sample;
@@ -51,13 +44,13 @@ impl BeatDetector {
     }
 }
 
-struct BeatDetectorSummer<'a> {
-    channels: Vec<&'a BeatDetector>,
+struct BeatDetectorSummer {
+    channels: Vec<BeatDetector>,
     energy: f32,
 }
 
-impl<'a> BeatDetectorSummer<'a> {
-    fn new(c: Vec<&'a BeatDetector>) -> BeatDetectorSummer<'a> {
+impl BeatDetectorSummer {
+    fn new(c: Vec<BeatDetector>) -> BeatDetectorSummer {
         BeatDetectorSummer {
             channels: c,
             energy: 0.,
@@ -113,10 +106,7 @@ fn run() -> Result<(), pa::Error> {
     // Construct the settings with which we'll open our duplex stream.
     let settings = pa::DuplexStreamSettings::new(input_params, output_params, SAMPLE_RATE, FRAMES);
 
-    let mut bd_left = BeatDetector::new();
-    let mut bd_right = BeatDetector::new();
-    let mut bd_summer = BeatDetectorSummer::new(vec![&bd_left, &bd_right]);
-
+    let mut bd_summer = BeatDetectorSummer::new(vec![BeatDetector::new(), BeatDetector::new()]);
     let mut prev_time: u32 = 0;
 
     // A callback to pass to the non-blocking stream.
@@ -126,10 +116,10 @@ fn run() -> Result<(), pa::Error> {
         let mut i = 0;
         while i < frames * 2 {
             if i & 1 == 0 {
-                bd_left.insert_new_sample(in_buffer[i]);
+                bd_summer.channels[0].insert_new_sample(in_buffer[i]);
             }
             else {
-                bd_right.insert_new_sample(in_buffer[i]);
+                bd_summer.channels[1].insert_new_sample(in_buffer[i]);
             }
             out_buffer[i] = in_buffer[i];
             i += 1;
