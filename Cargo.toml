@@ -1,0 +1,8 @@
+[package]
+name = "rust_beat_detector"
+version = "0.1.0"
+authors = ["aaruel <wmakit88@gmail.com>"]
+
+[dependencies]
+"portaudio" = "0.7.0"
+ansi-escapes = "0.1.0"
