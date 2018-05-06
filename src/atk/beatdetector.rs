@@ -71,16 +71,33 @@ impl BeatDetectorSummer {
         energy
     }
 
+    fn calculate_variance(&self, local_energy: f32) -> f32 {
+        let float_sbs: f32 = self.energies_buffer_size as f32;
+        let ratio: f32 = 1.0 / float_sbs;
+        let var = |sum: f32, &val: &f32| sum + f32::powf(val - local_energy, 2.0);
+        self.energies_buffer.iter().fold(0., var) * ratio
+    }
+
+    fn calculate_constant(&self, variance: f32) -> f32 {
+        (-0.0025714 * variance) + 1.5142857
+    }
+
+    fn insert_local_energy(&mut self, instant_energy: f32) {
+        self.energies_buffer[self.energies_buffer_position] = instant_energy;
+        self.energies_buffer_position = (self.energies_buffer_position + 1) % self.energies_buffer_size;
+    }
+
     pub fn detect(&mut self) {
         // calculate instant energy
         // calculate local energies
+        // calculate variance
         // insert instant energy into local energy
         // compare instant energy to (constant * local energy)
         let instant_energy = self.calculate_instant_energy();
         let local_energy = self.calculate_local_energy();
-        self.energies_buffer[self.energies_buffer_position] = instant_energy;
-        self.energies_buffer_position = (self.energies_buffer_position + 1) % self.energies_buffer_size;
-        let local_energy_mod = local_energy * BeatDetectorSummer::SENSITIVITY;
+        let variance = self.calculate_variance(local_energy);
+        self.insert_local_energy(instant_energy);
+        let local_energy_mod = local_energy * self.calculate_constant(variance);
         if instant_energy > local_energy_mod && instant_energy > BeatDetectorSummer::THRESHOLD {
             println!("Beat! instant_energy: {} local_energy: {}", instant_energy, local_energy_mod);
         }
