@@ -1,6 +1,6 @@
 // Mono channel (single energy)
 #[derive(Clone)]
-pub struct BeatDetectorChannel {
+struct BeatDetectorChannel {
     instant_energy_buffer: Vec<f32>,
     instant_energy_position: usize,
     instant_energy_size: usize,
@@ -20,7 +20,7 @@ impl BeatDetectorChannel {
         self.instant_energy_buffer.iter().fold(0., energy)
     }
 
-    pub fn insert_new_sample(&mut self, sample: f32) {
+    fn insert_sample(&mut self, sample: f32) {
         // Since buffer size == frames, sum evaluates after each complete chunk
         self.instant_energy_buffer[self.instant_energy_position] = sample;
         self.instant_energy_position = (self.instant_energy_position + 1) % self.instant_energy_size;
@@ -28,7 +28,7 @@ impl BeatDetectorChannel {
 }
 
 pub struct BeatDetectorSummer {
-    pub channels: Vec<BeatDetectorChannel>,
+    channels: Vec<BeatDetectorChannel>,
     energies_buffer: Vec<f32>,
     energies_buffer_position: usize,
     energies_buffer_size: usize,
@@ -46,6 +46,14 @@ impl BeatDetectorSummer {
             energies_buffer_position: 0,
             energies_buffer_size: ebs,
         }
+    }
+
+    pub fn insert_sample(&mut self, channel: usize, sample: f32) {
+        assert!(
+            channel < self.channels.len(), 
+            "Channel index {} is out of range", channel
+        );
+        self.channels[channel].insert_sample(sample);
     }
 
     fn calculate_local_energy(&mut self) -> f32 {

@@ -54,10 +54,10 @@ fn run() -> Result<(), pa::Error> {
         let mut i = 0;
         while i < frames * 2 {
             if i & 1 == 0 {
-                bd_summer.channels[0].insert_new_sample(in_buffer[i]);
+                bd_summer.insert_sample(0, in_buffer[i]);
             }
             else {
-                bd_summer.channels[1].insert_new_sample(in_buffer[i]);
+                bd_summer.insert_sample(1, in_buffer[i]);
             }
             out_buffer[i] = in_buffer[i];
             i += 1;
